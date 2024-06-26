@@ -1,10 +1,27 @@
 
 import torch
 
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, PreTrainedModel, PretrainedConfig
 import math 
 
-class Compressor(torch.nn.Module):
+import torch
+import logging
+from .encoder import EncoderModel
+logger = logging.getLogger(__name__)
+
+
+class CompressorConfig(PretrainedConfig):
+
+    model_type = "compressor"
+    def __init__(self, compr_model_name, compr_rate, compr_linear_type, decoder_hidden_size,
+                 **kwargs, ):
+        super().__init__(**kwargs)
+        self.compr_model_name = compr_model_name
+        self.compr_rate = compr_rate
+        self.compr_linear_type = compr_linear_type
+        self.decoder_hidden_size = decoder_hidden_size
+
+class Compressor(PreTrainedModel):
     def __init__(self, compr_model_name, compr_rate, compr_linear_type, decoder_hidden_size):
         super().__init__()
         # init model
@@ -52,3 +69,29 @@ class Compressor(torch.nn.Module):
 
 
         return  transformed_embeds
+    
+
+class DenseCompressor(EncoderModel):
+    TRANSFORMER_CLS = Compressor
+
+    def __init__(self,
+                 **kwargs
+                 ):
+        super().__init__(**kwargs)
+        self.query_encoder = self.encoder.clone()
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+
+    def freeze(self, model):
+        for param in model.parameters():
+            param.requires_grad = False
+            
+    def encode_query(self, qry):
+        return self.encoder(**qry, return_dict=True)
+    
+    def encode_passage(self, psg):
+        return self.encoder(**psg, return_dict=True)
+
+
+
+

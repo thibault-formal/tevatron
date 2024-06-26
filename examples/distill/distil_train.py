@@ -10,7 +10,7 @@ from transformers import (
 )
 
 from tevatron.arguments import DataArguments
-from tevatron.modeling import DenseModel
+from tevatron.modeling import DenseModel, DenseCompressor
 from tevatron.reranker.modeling import RerankerModel
 from tevatron.distillation.data import DistilTrainDataset, DistilTrainCollator, HFDistilTrainDataset
 from tevatron.distillation.trainer import DistilTrainer
@@ -69,7 +69,7 @@ def main():
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir
     )
-    model = DenseModel.build(
+    model = DenseCompressor.build(
         model_args,
         training_args,
         config=config,
