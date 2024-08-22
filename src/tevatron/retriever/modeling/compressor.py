@@ -1,9 +1,8 @@
-
 import torch
-
+import os
 from transformers import AutoModel, AutoTokenizer, PreTrainedModel, PretrainedConfig
 import math 
-
+import copy
 import torch
 import logging
 from .encoder import EncoderModel
@@ -44,7 +43,7 @@ class Compressor(PreTrainedModel):
             self.linear = torch.nn.Linear(self.model.config.hidden_size, cfg.decoder_hidden_size)
         self.linear = self.linear.bfloat16()
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, **kwargs):
         segment_compress_outputs = self.model(input_ids=input_ids, attention_mask=attention_mask,
                                               output_hidden_states=True)
         num_embs = math.ceil(input_ids.size(1) / self.compr_rate)
@@ -74,7 +73,7 @@ class Compressor(PreTrainedModel):
         if self.compressing_mode == "mean":
             transformed_embeds = torch.mean(transformed_embeds, dim=2)
 
-        return transformed_embeds
+        return transformed_embeds.squeeze(1)
 
 
 class DenseCompressor(EncoderModel):
@@ -84,20 +83,37 @@ class DenseCompressor(EncoderModel):
                  **kwargs
                  ):
         super().__init__(**kwargs)
-        self.query_encoder = self.encoder.clone()
-        for param in self.encoder.parameters():
-            param.requires_grad = False
+        #self.query_encoder = self.encoder.clone()
+        self.encoder_q = copy.deepcopy(self.encoder)
+        self.freeze(self.encoder)
 
     def freeze(self, model):
         for param in model.parameters():
             param.requires_grad = False
             
     def encode_query(self, qry):
-        return self.encoder(**qry, return_dict=True)
+        return self.encoder_q(**qry, return_dict=True)
     
     def encode_passage(self, psg):
         return self.encoder(**psg, return_dict=True)
+    
+    @classmethod
+    def load(cls,
+             model_name_or_path: str,
+             pooling: str = 'cls',
+             normalize: bool = False,
+             lora_name_or_path: str = None,
+             **hf_kwargs):
+        base_model = cls.TRANSFORMER_CLS.from_pretrained(os.path.join(model_name_or_path, "doc"), **hf_kwargs)
+        model = cls(
+                encoder=base_model,
+                pooling=pooling,
+                normalize=normalize
+            )
+        # then load the query model  
+        model.encoder_q = cls.TRANSFORMER_CLS.from_pretrained(os.path.join(model_name_or_path, "query"))
+        return model
 
-
-
-
+    def save(self, output_dir: str):
+        self.encoder.save_pretrained(os.path.join(output_dir, "doc"))  # not really needed but easier 
+        self.encoder_q.save_pretrained(os.path.join(output_dir, "query"))

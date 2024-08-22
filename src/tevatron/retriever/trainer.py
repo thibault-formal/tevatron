@@ -5,7 +5,7 @@ import torch
 
 from transformers.trainer import Trainer, TRAINING_ARGS_NAME
 import torch.distributed as dist
-from .modeling import EncoderModel
+from .modeling import EncoderModel, DenseCompressor, DenseModelFrozen
 
 
 import logging
@@ -29,6 +29,8 @@ class TevatronTrainer(Trainer):
         # They can then be reloaded using `from_pretrained()`
         if not isinstance(self.model, supported_classes):
             raise ValueError(f"Unsupported model class {self.model}")
+        elif isinstance(self.model, DenseCompressor) or isinstance(self.model, DenseModelFrozen):
+            self.model.save(output_dir)
         else:
             if state_dict is None:
                 state_dict = self.model.state_dict()

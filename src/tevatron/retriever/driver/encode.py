@@ -19,7 +19,7 @@ from tevatron.retriever.arguments import ModelArguments, DataArguments, \
     TevatronTrainingArguments as TrainingArguments
 from tevatron.retriever.dataset import EncodeDataset
 from tevatron.retriever.collator import EncodeCollator
-from tevatron.retriever.modeling import EncoderOutput, DenseModel
+from tevatron.retriever.modeling import EncoderOutput, DenseModel, DenseModelFrozen, DenseCompressor
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +60,35 @@ def main():
     else:
         torch_dtype = torch.float32
     
-    model = DenseModel.load(
-        model_args.model_name_or_path,
-        pooling=model_args.pooling,
-        normalize=model_args.normalize,
-        lora_name_or_path=model_args.lora_name_or_path,
-        cache_dir=model_args.cache_dir,
-        torch_dtype=torch_dtype
+
+    if model_args.compressor_model:
+        print("use cocom compressor")
+        model = DenseCompressor.load(
+            model_args.model_name_or_path,
+            pooling=model_args.pooling,
+            normalize=model_args.normalize,
+            lora_name_or_path=model_args.lora_name_or_path,
+            cache_dir=model_args.cache_dir,
+            torch_dtype=torch_dtype)
+    elif model_args.dense_frozen:
+        print("use frozen doc encoder")
+        model = DenseModelFrozen.load(
+            model_args.model_name_or_path,
+            pooling=model_args.pooling,
+            normalize=model_args.normalize,
+            lora_name_or_path=model_args.lora_name_or_path,
+            cache_dir=model_args.cache_dir,
+            torch_dtype=torch_dtype)   
+    else:
+        model = DenseModel.load(
+            model_args.model_name_or_path,
+            pooling=model_args.pooling,
+            normalize=model_args.normalize,
+            lora_name_or_path=model_args.lora_name_or_path,
+            cache_dir=model_args.cache_dir,
+            torch_dtype=torch_dtype
     )
+
 
     encode_dataset = EncodeDataset(
         data_args=data_args,

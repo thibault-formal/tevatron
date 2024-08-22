@@ -13,6 +13,8 @@ from tevatron.retriever.arguments import ModelArguments, DataArguments, \
 from tevatron.retriever.dataset import TrainDataset
 from tevatron.retriever.collator import TrainCollator
 from tevatron.retriever.modeling import DenseModel
+from tevatron.retriever.modeling.compressor import DenseCompressor
+from tevatron.retriever.modeling.dense_frozen import DenseModelFrozen
 from tevatron.retriever.trainer import TevatronTrainer as Trainer
 from tevatron.retriever.gc_trainer import GradCacheTrainer as GCTrainer
 
@@ -68,12 +70,27 @@ def main():
         tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.padding_side = 'right'
     
-    model = DenseModel.build(
-        model_args,
-        training_args,
-        cache_dir=model_args.cache_dir,
-    )
-
+    if model_args.compressor_model:
+        print("use cocom compressor")
+        model = DenseCompressor.build(
+            model_args,
+            training_args,
+            cache_dir=model_args.cache_dir,
+        )
+    elif model_args.dense_frozen:
+        print("use frozen doc encoder")
+        model = DenseModelFrozen.build(
+            model_args,
+            training_args,
+            cache_dir=model_args.cache_dir,
+        )    
+    else:
+        model = DenseModel.build(
+            model_args,
+            training_args,
+            cache_dir=model_args.cache_dir,
+        )
+        
     train_dataset = TrainDataset(data_args)
     collator = TrainCollator(data_args, tokenizer)
 

@@ -62,6 +62,16 @@ class ModelArguments:
         metadata={"help": "lora target modules"}
     )
 
+    compressor_model: bool = field(
+        default=False,
+        metadata={"help": "use a compressor (cocom) model"}
+    )
+
+    dense_frozen: bool = field(
+        default=False,
+        metadata={"help": "use a compressor (cocom) model"}
+    )
+    
     # for Jax training
     dtype: Optional[str] = field(
         default="float32",

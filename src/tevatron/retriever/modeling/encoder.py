@@ -47,7 +47,6 @@ class EncoderModel(nn.Module):
     def forward(self, query: Dict[str, Tensor] = None, passage: Dict[str, Tensor] = None):
         q_reps = self.encode_query(query) if query else None
         p_reps = self.encode_passage(passage) if passage else None
-
         # for inference
         if q_reps is None or p_reps is None:
             return EncoderOutput(
